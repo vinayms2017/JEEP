@@ -22,7 +22,7 @@ For simplicity, the features are reduced to these two lists
 
 ## Quick Example
 
-The image is a screen shot of a simple demonstration application created using Jeep that helps visualize hierarchies. It shows a Mermaid class. The code follows after it. 
+The image is a screen shot of a simple demonstration application created using Jeep that helps visualize hierarchies. It shows a Mermaid class. The code shows only one of the ways of creating and using classes; there are a few more.
 
 ![](https://github.com/vinayms2017/JEEP/blob/master/mermaiddemo.jpg)
 
