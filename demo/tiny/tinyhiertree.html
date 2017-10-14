@@ -1,0 +1,174 @@
+<html>
+<head>
+<title>Tiny Hierarchy Visualizer</title>
+<style>
+.list
+{
+	list-style-position: inside;
+	padding: 0;
+}
+.list-item
+{
+	padding-top: 2px;
+}
+#script
+{
+	padding: 3px;
+	resize: none;
+	font: 14px consolas;
+	border: 1px solid gray;
+	width: 400px;
+	height: 100px;
+}
+</style>
+</head>
+<body>
+<p>In the diagram, boxes represent classes and lines represent inheritance relationship. Lower boxes inherit from higher boxes. The colors indicate the nature of a particular member function, say Memfunc. Red shade indicates that it is abstract. Yellow shade indictes that it is virtual. If virtual derives from abstract, it indicates means that the function is implemented. Gray shade indicates that the class must implement the abstract function. Blue shade indicates the function is plain. White indicates that it is absent. </p>
+<div style="display: inline-block;">
+<div style="display: inline-block;vertical-align: top">
+<div id="vtree""></div>
+</div>
+<div style="display: inline-block;vertical-align: top">
+<div id="tab"></div>
+<p>Script</p>
+<textarea spellcheck='false' id="script"></textarea>
+</div>
+</div>
+</body>
+<script type="text/javascript" src="../../jeep.js"></script>
+<script type="text/javascript" src="tinycanvas.js"></script>
+<script type="text/javascript" src="tinypainter.js"></script>
+<script type="text/javascript" src="tinyhiertree.js"></script>
+<script type="text/javascript" src="tinytab.js"></script>
+<script>
+
+Env = JEEP.CreateEnvironment({client: "jeep-aware", mode: "development-mode"})
+//Env = JEEP.CreateEnvironment({client: "jeep-aware", mode: "production-mode"})
+
+PainterLib = InitTinyPainterLib(Env)
+Painter = PainterLib.GetClass("Painter")
+TinyHierTreeLib = InitTinyHierTree(Env, PainterLib)
+
+canvas = document.createElement("canvas");
+canvas.style.border = "1px solid gray"
+canvas.height = 400;
+canvas.width = 450;
+document.getElementById("vtree").appendChild(canvas)
+painter = new Painter(canvas)
+
+HierTree = TinyHierTreeLib.GetClass("Tree")
+tree = new HierTree(canvas.offsetWidth)
+tree.Paint(painter)
+
+let currSel = null;
+
+function resetCurrSel(){if(currSel)currSel.style.color = "black"}
+
+script = document.getElementById("script")
+script.addEventListener("keypress", function(e){
+	var code = e.which || e.keyCode;
+	if(e.ctrlKey && code == 13)
+	{
+		tree.Reset(script.value, painter)
+		resetCurrSel();
+	}
+})
+
+TinyTabLib = InitTinyTab(Env)
+TinyTab = TinyTabLib.GetClass("Tab")
+TabPanel = TinyTabLib.GetRecord("Panel")
+
+HierTab = Env.Object.CreateClass("HierTab", {
+	CrBaseClass: [TinyTab],
+	CONSTRUCTOR: function(){
+		this.listClickHandler = this.listClickHandlerFunc.bind(this);
+	},
+	Variables: {
+		listClickHandler: null,
+	},
+	Functions: {
+		AddTab: function(id, infoArr){
+			let info = {}
+			for(let k = 0; k<infoArr.length; k++)
+				info[infoArr[k].name] = infoArr[k].code
+			let list = document.createElement("ol")
+			list.className = "list"
+			list.structInfo = info;
+			let panel =  TabPanel.New({title: id, domElement: list})
+			this.AddPanel(panel)
+			list.style.cursor = "pointer"
+			list.onclick = this.listClickHandler;
+			let keys = Object.keys(info)
+			for(let k = 0; k<keys.length; k++)
+			{
+				let li = document.createElement('li')
+				li.className ="list-item"
+				li.textContent = keys[k];
+				list.appendChild(li)
+			}
+		},
+		listClickHandlerFunc: function(e){
+			resetCurrSel();
+			let t = e.target;
+			currSel = t;
+			currSel.style.color = "blue";
+			this.UpdateAllTabs();
+			let c = t.parentElement.structInfo[t.textContent]
+			tree.Reset(c, painter)
+			script.value = c;
+		}
+	},
+	Protected: {
+		$virtual$__UpdateTab: function(tab){
+			tab.style.color = (currSel && tab.panel == currSel.parentElement) ? "blue" : "black"
+		},
+	}
+})
+
+tab = new HierTab
+tab.SetSize("100px", "200px")
+tabelem = document.getElementById("tab")
+tabelem.appendChild(tab.GetDomElement())
+
+tab.AddTab("Basic", [
+	{name: "(SISL) single inheritance single level", code: "$Base[Derived]"},
+	{name: "(SIML) single inheritance multiple level", code: "$TopBase[MidBase] MidBase[Derived]"},
+	{name: "(MISL) multiple inheritance single level", code: "$BaseA[Derived] $BaseB[Derived]"},
+	{name: "(MIML) multiple inheritance multiple level", code: "$TopBase[BaseA] BaseA[Derived] $BaseB[Derived]"},
+	{name: "(DSL) diamond inheritance single level", code: "$TopBase[BaseA, BaseB] BaseA[Derived] BaseB[Derived]"},
+	{name: "(DML) diamond inheritance multiple level", code: "$TopBase[BaseA, BaseB] BaseA[MidBase] BaseB[MidBase] MidBase[MidBaseA, MidBaseB] MidBaseA[Derived] MidBaseB[Derived]"},
+	{name: "(DSh) diamond and shaft inheritance", code: "$TopBase[BaseA, BaseB] BaseA[Derived] BaseB[Derived] $BaseX[BaseB]"},
+])
+
+tab.AddTab("Extended", [
+	{name: "(SISL-BV) SISL base virtual", code: "$vBase[Derived]"},
+	{name: "(SISL-BA) SISL base abstract", code: "$aBase[qDerived]"},
+	{name: "(SIML-R) SIML reabstraction", code: "$aTopBase[MidBase] vMidBase[LowBase] aLowBase[qDerived]"},
+	{name: "(DSL-V) all virtual", code: "$vTopBase[BaseA, BaseB] vBaseA[Derived] vBaseB[vDerived]"},
+	{name: "(DSL-A) top virtual", code: "$vTopBase[BaseA, BaseB] BaseA[Derived] BaseB[Derived]"},
+	{name: "(DSL-A) top abstract all virtual", code: "$aTopBase[BaseA, BaseB] vBaseA[Derived] vBaseB[vDerived]"},
+])
+
+tab.AddTab("Invalid", [
+	{name: "(SISL) base plain derived plain", code: "$mBase[mDerived]"},
+	{name: "(SISL-BV) derived plain", code: "$vBase[mDerived]"},
+	{name: "(SISL-BA) derived plain", code: "$aBase[mDerived]"},
+	{name: "(MISL) both base plain", code: "$mBaseA[Derived] $mBaseB[Derived]"},
+	{name: "(MISL) base plain base virtual", code: "$vBaseA[Derived] $mBaseB[Derived]"},
+	{name: "(MISL) both base virtual", code: "$vBaseA[Derived] $vBaseB[Derived]"},
+	{name: "(DSL-V) base virtual", code: "$vTopBase[BaseA, BaseB] vBaseA[Derived] vBaseB[Derived]"},
+	{name: "(DSL-V) top virtual base virtual", code: "$vTopBase[BaseA, BaseB] BaseA[Derived] vBaseB[Derived]"},
+	{name: "(DSL-A) base virtual", code: "$aTopBase[BaseA, BaseB] vBaseA[Derived] vBaseB[Derived]"},
+	{name: "Triangle", code: "$TopBase[MidBase, Right] MidBase[Left, Right],"},
+	{name: "DisplayedTask", code: "$Link[Displayed] $.Link[Task] Displayed[Disp_Task] Task[Disp_Task]"}
+])
+
+tab.AddTab("Miscellaneous", [
+	{name: "Default", code: "$aTop[MidA,MidB] vMidA[Der] MidB[Der]"},
+	{name: "Mermaid", code: "$aAnimal[Human, Fish, Android] vHuman[Mermaid, PG13Woman]  PG13Woman[Disney] vFish[Mermaid] -aMermaid[qHeavenly, -qHellish, --qWestworld, ---qShud, ----qDisney] vAndroid[Westworld]"},
+])
+
+tab.ActivatePanel(0)
+
+</script>
+</html>
