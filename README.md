@@ -22,7 +22,9 @@ For simplicity, the features are reduced to these two lists
 
 ## Quick Example
 
-The image is a screen shot of a simple demonstration application created using Jeep that helps visualize hierarchies. It shows a Mermaid class. The code shows only one of the ways of creating and using classes; there are a few more.
+The image is a screen shot of a simple demonstration application created using Jeep that helps visualize hierarchies. It shows a Mermaid class. The code shows only one of the ways of creating and using classes; there are a few more. 
+
+To see it in action, create an html file, install Jeep, copy-paste the code, save and run.
 
 ![](https://github.com/vinayms2017/JEEP/blob/master/mermaiddemo.jpg)
 
@@ -36,7 +38,7 @@ let DemoEnv = JEEP.CreateEnvironment({
 DemoEnv.Object.RegisterClass("Animal", {
     Functions: {
         LiveOneMoment: function(){
-            cout(this.$name+" living one moment.");
+            console.log(this.$name+" living one moment.");
             this.Breathe();
             this.Move(1,1)
         },
@@ -48,16 +50,16 @@ DemoEnv.Object.RegisterClass("Animal", {
 DemoEnv.Object.RegisterClass("Human", {
     BaseClass: "Animal",
     Functions: {
-        $virtual$__Move: function(x, y){cout("  walking to "+x+" "+y)},
-        $virtual$__Breathe: function(){cout("  breathing with lungs")},
+        $virtual$__Move: function(x, y){console.log("  walking to "+x+" "+y)},
+        $virtual$__Breathe: function(){console.log("  breathing with lungs")},
     }
 });
 
 DemoEnv.Object.RegisterClass("Fish", {
     BaseClass: "Animal",
     Functions: {
-        $virtual$__Move: function(x, y){cout("  swimming to "+x+" "+y)},
-        $virtual$__Breathe: function(){cout("  breathing with gills")},
+        $virtual$__Move: function(x, y){console.log("  swimming to "+x+" "+y)},
+        $virtual$__Breathe: function(){console.log("  breathing with gills")},
     }
 });
 
