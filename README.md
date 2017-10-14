@@ -61,7 +61,7 @@ DemoEnv.Object.RegisterClass("Fish", {
     }
 });
 
-DemoEnv.Object.CreateClass("Mermaid", {
+DemoEnv.Object.RegisterClass("Mermaid", {
     BaseClass: "Human, Fish",
     Functions: {
         $virtual$__Move: function(x, y){this.$base.Fish.Move(x,y)},
