@@ -1,30 +1,10 @@
 # JEEP
 
-JEEP is a C++ inspired framework that brings object orientation to JavaScript, well 
-
-beyond what is available in the language by design. It is an attempt to elevate the 
-
-language from being a simple DOM manipulating script to something that can be used 
-
-for classic software engineering. By that I mean being used to create reusable, 
-
-customizable and extensible components of complex structure and behavior.
+JEEP is a C++ inspired framework that brings object orientation to JavaScript, well beyond what is available in the language by design. It is an attempt to elevate the language from being a simple DOM manipulating script to something that can be used for classic software engineering. By that I mean being used to create reusable, customizable and extensible components of complex structure and behavior.
 
 ## Features
 
-Jeep has a host of features and they all revolve around structure and semantics. As 
-
-a result, it promotes writing readable code and is very strict in enforcing a set of 
-
-rules. It delivers all this with minimum overhead, and sometimes with none at all. 
-
-Thus, it can be classed as a medium sized framework with moderate amount of 
-
-complexity. Yet, it is a very flexible framework and quite simple to use. Such a 
-
-framework cannot be effectively described in a small text file. Hence a 100+ page 
-
-pdf document exists that discusses the framework in detail.
+Jeep has a host of features and they all revolve around structure and semantics. As a result, it promotes writing readable code and is very strict in enforcing a set of rules. It delivers all this with minimum overhead, and sometimes with none at all. Thus, it can be classed as a medium sized framework with moderate amount of complexity. Yet, it is a very flexible framework and quite simple to use. Such a framework cannot be effectively described in a small text file. Hence a 100+ page pdf document exists that discusses the framework in detail.
 
 For simplicity, the features are reduced to these two lists
 
@@ -42,11 +22,7 @@ For simplicity, the features are reduced to these two lists
 
 ## Quick Example
 
-The image is a screen shot of a simple demonstration application created using Jeep 
-
-that helps visualize hierarchies. It shows a Mermaid class. The code follows after 
-
-it. 
+The image is a screen shot of a simple demonstration application created using Jeep that helps visualize hierarchies. It shows a Mermaid class. The code follows after it. 
 
 ![](https://github.com/vinayms2017/JEEP/blob/master/mermaiddemo.jpg)
 
