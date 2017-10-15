@@ -1964,4 +1964,38 @@ Run(function(cout, addTitle){
 	try{Lib.PutPixel(pt,clr, Shape.New())}catch(e){cout(e)}
 })
 
-Run(function(cout, addTitle){cout("end of demo")})// to show that no exceptions were raised in the demo code
+Run(function(cout, addTitle){
+	addTitle("Library demo");
+	function InitMyLib(){
+		if(this.initialized)
+			cout(this.$name + " already initialized")
+		else
+		{
+			this.lib = DemoEnv.CreateNamespace(this.$name);
+			this.lib.RegisterRecord("Shape", {shape: "round"});
+			this.initialized = true;
+		}
+		return this.lib;
+	}
+	JEEP.RegisterLibrary("MyLib", InitMyLib, {initialized: false, lib: null})
+	JEEP.InitLibrary("MyLib");
+	let MyLib = JEEP.InitLibrary("MyLib");
+	let Shape = MyLib.GetRecord("Shape")
+	let s = Shape.New();
+	cout(s.$name+".shape: "+s.shape)
+
+	cout("--- auto managed")
+	JEEP.RegisterLibrary("SomeLib", function(){
+		cout("initializing "+this.$name+"...")
+		let lib = DemoEnv.CreateNamespace(this.$name);
+		lib.RegisterRecord("Shape", {shape: "round"});
+		return lib;
+	})
+	JEEP.InitLibrary("SomeLib");
+	let SomeLib = JEEP.InitLibrary("SomeLib");
+	Shape = SomeLib.GetRecord("Shape")
+	s = Shape.New();
+	cout(s.$name+".shape: "+s.shape)
+})
+
+Run(function(cout, addTitle){cout("end of all demo")})// to show that no exceptions were raised in the demo code
