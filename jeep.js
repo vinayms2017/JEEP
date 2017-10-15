@@ -170,6 +170,36 @@ JEEP = {
 			JEEP.impl.Abort2({where: "GetClass", id: "object-accessor", idnames: {type: "class", name: name}});
 		return def;
 	},
+	RegisterLibrary: function(name, func, param){
+		if(arguments.length < 2 || arguments.length > 3)
+			JEEP.impl.Abort2({where: "RegisterLibrary", id: "invalid-lib-reg-arg"});
+		if(!name || typeof name !== 'string')
+			JEEP.impl.Abort2({where: "RegisterLibrary", id: "invalid-lib-reg-arg"});
+		if(! func || typeof func != 'function')
+			JEEP.impl.Abort2({where: "RegisterLibrary", id: "invalid-lib-reg-func", idnames: {name: name}});
+		if(param && typeof param == 'object' && param.$name !== undefined)
+			JEEP.impl.Abort2({where: "RegisterLibrary", id: "invalid-lib-reg-param", idnames: {name: name}});
+		if(JEEP.impl.Library[name] !== undefined)
+			JEEP.impl.Abort2({where: "RegisterLibrary", id: "library-present", idnames: {name: name}});
+		let manage = !param;
+		param = param || {}
+		param.$name = name;
+		JEEP.impl.Library[name] = {func: func, param: param, res: null, manage: manage};
+	},
+	InitLibrary: function(name){
+		if(arguments.length < 1 || !name || typeof name !== 'string')
+			JEEP.impl.Abort2({where: "InitLibrary", id: "invalid-lib-init-arg"});
+		let lib = JEEP.impl.Library[name];
+		if(lib === undefined)
+			JEEP.impl.Abort2({where: "InitLibrary", id: "library-absent", idnames: {name: name}});
+		if(lib.res)
+			return lib.res;
+		let args = Array.prototype.slice.call(arguments,1);
+		let res = lib.func.apply(lib.param, args);
+		if(lib.manage)
+			lib.res = res;
+		return res;
+	},
 	SetStdErr: function(printer){
 		let curr = JEEP.impl.stderr;
 		JEEP.impl.stderr = printer;
@@ -190,6 +220,7 @@ JEEP.InitTest = function()
 JEEP.CreateTestCase = function(test)
 {
 	JEEP.impl.ObjectDatabase.Reset();
+	JEEP.impl.Library = {};
 	JEEP.impl.testCase = undefined;
 	if(test)
 	{
@@ -3840,6 +3871,8 @@ JEEP.impl.DeclarationProperties = [
 "Functions", "Variables", "Protected", "Private", "Static",
 ];
 
+JEEP.impl.Library = {};
+
 JEEP.impl.EnvDirectives = JEEP.Utils.FlagProcessor.New({
 	"development-mode": JEEP.impl.ENV_DEVMODEFLAG, 
 	"production-mode": JEEP.impl.ENV_PRODMODE,
@@ -4101,6 +4134,12 @@ JEEP.impl.ErrorMessages = JEEP.Utils.MessageFormatter.New({
 	"prot-var-getset": "Protected variables cannot have get and set directives",
 	"prot-access": "The $what$ '$name$' of the class [$className$] is protected and not accessible directly",
 	"prot-decl-nodef": "The protected function '$func$' is declared but not defined",
+	"library-present": "A library by the name '$name$' is already registered",
+	"library-absent": "The library by the name '$name$' is not registered",
+	"invalid-lib-reg-arg": "The function expects a valid string, a valid function and an optional object as arguments",
+	"invalid-lib-reg-func": "Cannot register a non function for the library '$name$'",
+	"-invalid-lib-reg-param": "The parameter for the library '-name-' contains the reserved word '$name'",
+	"invalid-lib-init-arg": "The function expects exactly one argument which must be a valid string",
 });
 
 JEEP.impl.stderr = console.log;

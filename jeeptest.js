@@ -43,6 +43,7 @@ TestEnvInfo = {
 	"Wrapper",
 	"Scoped",
 	"ProductionMode",
+	"Library",
 	"Misc", 
 	];
 
@@ -7793,6 +7794,123 @@ TestEnvInfo.failtest_ProductionMode = function(givenEnv, testList)
 			let c = new Class;
 			try{c.Print()}catch(e){}
 			try{c.Print(1,2,3)}catch(e){}
+		}
+	});		
+}
+
+TestEnvInfo.passtest_Library = function(env, testList)
+{
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "lib-basic",
+		desc: "Tests the library setup.",
+		aspects: "library",
+		exp: [
+		"lib init count: 1", "arg: 10",
+		"init returned: 1",
+		"lib init count: 2","arg: 20",
+		"init returned: 2",
+		],
+		func: function(cout){
+			function init(val){
+				cout(this.$name + " init count: "+(++this.count));
+				cout("arg: "+val);
+				return this.count;
+			}
+			JEEP.RegisterLibrary("lib", init, {count: 0})
+			let c = JEEP.InitLibrary("lib", 10);
+			cout("init returned: "+c);
+			c = JEEP.InitLibrary("lib", 20);
+			cout("init returned: "+c);
+		}
+	});		
+
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "lib-managed-init",
+		desc: "Tests the library setup where JEEP manages the init return.",
+		aspects: "library",
+		exp: [
+		"init lib...",
+		"init returned: lib-result",
+		"init returned: lib-result",
+		],
+		func: function(cout){
+			JEEP.RegisterLibrary("lib", function(){
+				cout("init lib...")
+				return "lib-result"
+			})
+			let c = JEEP.InitLibrary("lib", 10);
+			cout("init returned: "+c);
+			c = JEEP.InitLibrary("lib", 20);
+			cout("init returned: "+c);
+		}
+	});		
+}
+
+TestEnvInfo.failtest_Library = function(env, testList)
+{
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "lib-reg-args",
+		desc: "Tries to register library with wrong arguments.",
+		aspects: "library, apiargs",
+		exp: [
+		"JEEP aborting from RegisterLibrary. The function expects a valid string, a valid function and an optional object as arguments.",
+		"JEEP aborting from RegisterLibrary. The function expects a valid string, a valid function and an optional object as arguments.",
+		"JEEP aborting from RegisterLibrary. The function expects a valid string, a valid function and an optional object as arguments.",
+		"JEEP aborting from RegisterLibrary. Cannot register a non function for the library 'a'.",
+		"JEEP aborting from RegisterLibrary. The parameter for the library 'a' contains the reserved word '$name'.",
+		],
+		func: function(cout){
+			try{JEEP.RegisterLibrary("a")}catch(e){}
+			try{JEEP.RegisterLibrary("a", function(){}, 0,0)}catch(e){}
+			try{JEEP.RegisterLibrary(1)}catch(e){}
+			try{JEEP.RegisterLibrary("a", 1, 1)}catch(e){}
+			try{JEEP.RegisterLibrary("a", function(){}, {$name: 0})}catch(e){}
+		}
+	});		
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "lib-reg",
+		desc: "Tries to register a library more than once.",
+		aspects: "library",
+		exp: [
+		"JEEP aborting from RegisterLibrary. A library by the name 'lib' is already registered."
+		],
+		func: function(cout){
+			function init(){
+				cout("init count: "+(++this.count));
+				return this.count;
+			}
+			JEEP.RegisterLibrary("lib", init, {count: 0})
+			JEEP.RegisterLibrary("lib", init, {count: 0})
+		}
+	});		
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "lib-init-args",
+		desc: "Tries to initiate library with invalid args.",
+		aspects: "library, apiargs",
+		exp: [
+		"JEEP aborting from InitLibrary. The function expects exactly one argument which must be a valid string.",
+		"JEEP aborting from InitLibrary. The function expects exactly one argument which must be a valid string.",
+		],
+		func: function(cout){
+			try{JEEP.InitLibrary()}catch(e){}
+			try{JEEP.InitLibrary(1)}catch(e){}
+		}
+	});		
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "lib-absent",
+		desc: "Tries to initiate a non registered library.",
+		aspects: "library",
+		exp: [
+		"JEEP aborting from InitLibrary. The library by the name 'lib' is not registered.",
+		],
+		func: function(cout){
+			try{JEEP.InitLibrary("lib")}catch(e){}
 		}
 	});		
 }
