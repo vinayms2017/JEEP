@@ -2535,20 +2535,6 @@ JEEP.impl.ProcessMemFuncs = function(env, decl, baseArr, info)
 			{				
 				if((type & JEEP.impl.FUNC_ABSTRACT) && info.ddMode)
 					JEEP.impl.AddError("abstract-implemented", {name: pair.key});
-				else if(overridable && decl._jeepdef_.ddVtable)
-				{
-					let vi = decl._jeepdef_.ddVtable[pair.key];
-					if(vi && (vi.argcount != plainf.length))
-					{
-						JEEP.impl.AddError("func-argcount-mismatch-baseder", {
-							type: "abstract", 
-							name: pair.key, 
-							base: vi.orig, "base-count": vi.argcount, 
-							derived: decl._jeepdef_.className, "der-count": plainf.length
-						});
-						continue;
-					}
-				}
 				else
 				{					
 					let vbases = [], nvbases = [];
@@ -2592,7 +2578,12 @@ JEEP.impl.ProcessMemFuncs = function(env, decl, baseArr, info)
 								}
 							}
 							if(bvi.argcount != plainf.length)
-								JEEP.impl.Errors.Add("The argument count for the "+(bvi.type & JEEP.impl.FUNC_ABSTRACT ? "abstract" : "virtual")+" function '" + pair.key + "' is declared as " +bvi.argcount+ " in base class ["+base.$name+"] but as " +plainf.length+ " in derived class");
+								JEEP.impl.AddError("func-argcount-mismatch-baseder", {
+									type: bvi.type & JEEP.impl.FUNC_ABSTRACT ? "abstract" : "virtual", 
+									name: pair.key, 
+									base: base.$name, "base-count": bvi.argcount, 
+									derived: decl._jeepdef_.className, "der-count": plainf.length
+								});
 						}
 						else if(overridable && presentInBase)
 							JEEP.impl.AddError("func-decl-mismatch-baseder", {name: pair.key, decl: isVirtual ? "virtual" : "abstract", where: "derived", "class-name": decl._jeepdef_.className, "not-where": "base", "not-where-name": base.$name});
