@@ -5075,23 +5075,6 @@ TestEnvInfo.commonProtectedFail = function(env, testList)
 
 		testList.push({
 			//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
-			name: "prot-plain-decl",
-			desc: "Tests arg type",
-			exp: [
-			"JEEP aborting from DeclareClass class [Class]. Only virtual and abstract protected functions are allowed to be declared.",
-			],
-			func: function(cout){
-				env.Object.DeclareClass("Class", {
-					Protected: {
-						$Print: "Array, Number, String",
-						Print: function(a,b,c){},
-					}
-				})
-			}
-		});
-
-		testList.push({
-			//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
 			name: "prot-decl-nodef",
 			desc: "A virtual function is declared but not defined declare-define",
 			exp: [
