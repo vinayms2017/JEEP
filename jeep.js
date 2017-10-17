@@ -422,16 +422,6 @@ JEEP.impl.DeclareClass = function(name, spec)
 		let pi = JEEP.impl.ProcessClubbedSpec(this.env, respec.Protected);
 		if(pi.vars)
 			JEEP.impl.Abort2({where: "DeclareClass", id: "prot-var-decl", objName: name, objType: "class"})
-		if(pi.funcs && pi.funcs.validFuncs)
-		{
-			let iter = JEEP.Utils.ObjectIterator.New(pi.funcs.validFuncs);
-			while(iter.GetNext())
-			{
-				let pair = iter.GetCurrPair();
-				if(!(pair.value.type & (JEEP.impl.FUNC_VIRTUAL|JEEP.impl.FUNC_ABSTRACT)))
-					JEEP.impl.Abort2({where: "DeclareClass", id: "prot-plain-func", objName: name, objType: "class"})
-			}
-		}
 		protFuncs = pi.funcs;
 		respec.Protected = null;
 	}
@@ -1813,7 +1803,10 @@ JEEP.impl.ProcessClassSpec = function(info)
 			for(let k = 0; k<res.errors.length; k++)
 				JEEP.impl.AddError("invalid-flags", {which: res.errors[k]});
 			if((res.flags & this.CLASS_MANUALBASECTOR) && !(info.spec.BaseClass||info.spec.CrBaseClass))
-				JEEP.impl.AddError("manual-base-construction");
+			{
+				if(info.where != "DefineClass")
+					JEEP.impl.AddError("manual-base-construction");
+			}
 		}
 		info.spec._jeepdef_.flags = res.flags;		
 	}
