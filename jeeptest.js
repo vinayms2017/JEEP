@@ -2271,7 +2271,7 @@ TestEnvInfo.failtest_ClassGen = function(env, testList)
 			desc: "as the name indicates.",
 			exp: [
 			"JEEP couldn't generate the class [Derived] due to the following errors.",
-			"The argument count for the abstract function 'GetName' is declared as 1 in base class [Base] but as 2 in derived class.",
+			"The argument count for the abstract function 'GetName' is declared as 1 in base class [Base] but as 2 in derived class [Derived].",
 			],
 			func: function(cout){
 				env.Object.DeclareClass("Base", {
@@ -6669,7 +6669,7 @@ TestEnvInfo.failtest_Hierarchy = function(env, testList)
 		desc: "",
 		exp: [
 		"JEEP couldn't generate the class [MidBase] due to the following errors.",
-		"The argument count for the virtual function 'getName' is declared as 0 in base class [TopBase] but as 1 in derived class.",
+		"The argument count for the virtual function 'getName' is declared as 0 in base class [TopBase] but as 1 in derived class [MidBase].",
 		],
 		func: function(cout){
 			env.Object.RegisterClass("TopBase", {
@@ -6699,7 +6699,7 @@ TestEnvInfo.failtest_Hierarchy = function(env, testList)
 		desc: "",
 		exp: [
 		"JEEP couldn't generate the class [MidBase] due to the following errors.",
-		"The argument count for the abstract function 'getName' is declared as 0 in base class [TopBase] but as 1 in derived class.",
+		"The argument count for the abstract function 'getName' is declared as 0 in base class [TopBase] but as 1 in derived class [MidBase].",
 		],
 		func: function(cout){
 			env.Object.RegisterClass("TopBase", {
@@ -6728,7 +6728,7 @@ TestEnvInfo.failtest_Hierarchy = function(env, testList)
 		desc: "as the name indicates",
 		exp: [
 		"JEEP couldn't generate the class [Derived] due to the following errors.",
-		"The argument count for the virtual function 'GetName' is declared as 1 in base class [Base] but as 2 in derived class.",
+		"The argument count for the virtual function 'GetName' is declared as 1 in base class [Base] but as 2 in derived class [Derived].",
 		],
 		func: function(cout){
 			env.Object.RegisterClass("Base", {
@@ -6749,7 +6749,7 @@ TestEnvInfo.failtest_Hierarchy = function(env, testList)
 		desc: "as the name indicates",
 		exp: [
 		"JEEP couldn't generate the class [Derived] due to the following errors.",
-		"The argument count for the abstract function 'GetName' is declared as 1 in base class [Base] but as 2 in derived class.",
+		"The argument count for the abstract function 'GetName' is declared as 1 in base class [Base] but as 2 in derived class [Derived].",
 		],
 		func: function(cout){
 			env.Object.RegisterClass("Base", {
