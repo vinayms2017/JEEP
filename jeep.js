@@ -89,6 +89,7 @@ JEEP = {
 		// This is needed for functions inside Environment
 		Environment.env = Environment;
 		this.Utils.CopyProps(this.impl, Environment.Object, [
+			"RegisterGroup",
 			"CreateRecord", "CreateStruct", "CreateClass",
 			"RegisterRecord", "RegisterStruct", 
 			"RegisterClass", "DeclareClass", "DefineClass", "CreateWrapperClass",
@@ -117,6 +118,15 @@ JEEP = {
 							JEEP.impl.Abort({noclass: true, where: "CreatePartition", id: "ns-partition-exists", idnames: {name: "nsname", part: name}});
 						this[name] = partition;
 					}
+				},
+				GetEnvironment: function(){
+					return Environment;
+				},
+				RegisterGroup: function(name, spec){
+					return JEEP.impl.RegisterGroup.call(Environment, nsname+"."+name, spec)
+				},
+				GetGroup: function(name){
+					return JEEP.GetGroup.apply(Environment, [nsname+"."+name].concat(Array.prototype.slice.call(arguments,1)))
 				},
 				RegisterRecord: function(name, spec){
 					return JEEP.impl.RegisterRecord.call(Environment, nsname+"."+name, spec)
@@ -148,6 +158,10 @@ JEEP = {
 
 		// done
 		return Environment;
+	},
+	GetGroup: function(name)
+	{
+		return JEEP.impl.GetGroup.apply(this, [name].concat(Array.prototype.slice.call(arguments,1)));
 	},
 	GetRecord: function(name)
 	{
@@ -267,6 +281,146 @@ JEEP.impl.ValidateApiArgs = function(where)
 	if(!spec || typeof spec != 'object')
 		JEEP.impl.Abort2({where: where, id: "invalid-api-arg"});
 	JEEP.impl.ValidateObjName(where, name)
+}
+
+JEEP.impl.AddGroupVars = function(vars, where)
+{
+	let iter = JEEP.Utils.ObjectIterator.New(vars);
+	while(iter.GetNext())
+	{
+		let pair = iter.GetCurrPair();
+		where[pair.key] = pair.value.value;
+	}
+}
+
+JEEP.impl.AddGroupFuncs = function(name, funcs, where, thisObj)
+{
+	let iter = JEEP.Utils.ObjectIterator.New(funcs.validFuncs);
+	while(iter.GetNext())
+	{
+		let pair = iter.GetCurrPair();
+		let f = pair.value.func;
+		if(funcs.typedFuncs)
+		{
+			let ti = funcs.typedFuncs[pair.key];
+			if(ti)
+			{
+				argtype = ti.type;
+				f = JEEP.impl.MakeArgTypeFunction("group", name, f, pair.key, ti.arr)
+			}
+		}
+		where[pair.key] = function(){return f.apply(thisObj, arguments)}
+	}
+}
+
+JEEP.impl.RegisterGroup = function(name, spec)
+{
+	let devmode = this.env.IsDevMode();
+	if(devmode)
+	{
+		let args = ["RegisterGroup"].concat(Array.prototype.slice.call(arguments,0));
+		JEEP.impl.ValidateApiArgs.apply(JEEP.impl, args)
+	}
+	JEEP.impl.ValidateObjectNotRegistered("RegisterGroup", name, "group");		
+
+	let api = {
+		$name: name,
+		_jeepdef_:{}
+	};
+
+	if(spec.CONSTRUCTOR)
+		api._jeepdef_.CONSTRUCTOR = spec.CONSTRUCTOR;
+
+	if(spec.Private)
+	{
+		api._jeepdef_.rebase = true;
+		let pi = JEEP.impl.ProcessClubbedSpec(this.env, spec.Private);
+		if(pi.vars)
+		{
+			if(pi.vars.getset)
+				JEEP.impl.AddError("group-vars-getset");
+			api._jeepdef_.privVars = pi.vars.validVars;
+		}
+		if(pi.funcs)
+			api._jeepdef_.privFuncs = pi.funcs;
+	}
+
+	let vars = null, funcs = null;
+
+	if(spec.Variables)
+		vars = JEEP.impl.ProcessVarDesc(this.env, spec.Variables)
+	if(spec.Functions)
+		funcs = JEEP.impl.ProcessFuncDesc(this.env, spec.Functions);
+
+	if(vars)
+	{
+		if(vars.getset)
+			JEEP.impl.AddError("group-vars-getset");
+		if(spec.Private)
+			api._jeepdef_.vars = vars.validVars;
+		else
+			JEEP.impl.AddGroupVars(vars.validVars, api);
+	}
+	if(funcs)
+	{
+		if(spec.Private)
+			api._jeepdef_.funcs = funcs;
+		else
+			JEEP.impl.AddGroupFuncs(name, funcs, api, api)
+	}
+
+	if(devmode && !JEEP.impl.Errors.Empty())
+		JEEP.impl.Abort2({where: "RegisterGroup"});
+
+	if(!spec.Private)
+		api.$def = api;// if added without this check, deepclone is smashed
+
+	JEEP.impl.ObjectDatabase.Add(api, name, "group");
+}
+
+JEEP.impl.GetGroup = function(name)
+{
+	let def = JEEP.impl.ObjectDatabase.Get(name, "group");
+	if(def === undefined)
+		JEEP.impl.Abort2({where: "GetGroup", id: "object-accessor", idnames: {type: "group", name: name}});
+
+	// _jeepdef_ is deleted after the first time group is returred from here because it serves no further purpose
+	
+	if(arguments.length > 1 && (!def._jeepdef_ || !def._jeepdef_.CONSTRUCTOR))
+		JEEP.impl.Abort2({where: "GetGroup", id: "group-constructor", idnames: {name: name}});
+	
+	if(def._jeepdef_)
+	{
+		let thisObj = def;
+		if(def._jeepdef_.rebase)
+		{
+			thisObj = JEEP.Utils.DeepClone(def);
+			if(def._jeepdef_.privFuncs || def._jeepdef_.privVars)
+				thisObj.$$ = {};
+			if(def._jeepdef_.privFuncs)
+				JEEP.impl.AddGroupFuncs(name, def._jeepdef_.privFuncs, thisObj.$$, thisObj);
+			if(def._jeepdef_.privVars)
+				JEEP.impl.AddGroupVars(def._jeepdef_.privVars, thisObj.$$);
+			if(def._jeepdef_.funcs)
+			{
+				JEEP.impl.AddGroupFuncs(name, def._jeepdef_.funcs, def, thisObj);
+				if(def != thisObj)
+				{
+					let fnames = Object.keys(def._jeepdef_.funcs.validFuncs);
+					JEEP.Utils.CopyProps(def, thisObj, fnames);
+				}
+			}
+			if(def._jeepdef_.vars)
+				JEEP.impl.AddGroupVars(def._jeepdef_.vars, def);
+			delete thisObj._jeepdef_;
+		}
+		if(def._jeepdef_.CONSTRUCTOR)
+			def._jeepdef_.CONSTRUCTOR.apply(thisObj, Array.prototype.slice.call(arguments,1))
+		delete def._jeepdef_;
+		def.$def = def;
+	}
+
+	return def;
 }
 
 JEEP.impl.RegisterRecord = function(name, spec)
@@ -419,7 +573,7 @@ JEEP.impl.DeclareClass = function(name, spec)
 	}
 	if(respec.Protected)
 	{
-		let pi = JEEP.impl.ProcessClubbedSpec(this.env, respec.Protected);
+		let pi = JEEP.impl.ProcessClubbedSpec(this.env, respec.Protected, true);
 		if(pi.vars)
 			JEEP.impl.Abort2({where: "DeclareClass", id: "prot-var-decl", objName: name, objType: "class"})
 		protFuncs = pi.funcs;
@@ -968,7 +1122,7 @@ JEEP.impl.MakeArgTypeValidated = function(type, func)
 	let arr = arginfo.arr;
 	if(!JEEP.impl.Errors.Empty())
 		JEEP.impl.Abort({noclass:true, where: "MakeArgTypeValidated", className: "<unknown>"})
-	return JEEP.impl.MakeArgTypeFunction("<unknown>", func, func.name, arr, false);
+	return JEEP.impl.MakeArgTypeFunction("function", "<unknown>", func, func.name, arr, false);
 }
 
 JEEP.impl.ValidateObjName = function(where, name)
@@ -1259,7 +1413,7 @@ JEEP.impl.End = function(env, decl, ddMode, noAdd)
 					if(ti)
 					{
 						argtype = ti.type;
-						f = this.MakeArgTypeFunction(decl._jeepdef_.className, f, pair.key, ti.arr)
+						f = this.MakeArgTypeFunction("class", decl._jeepdef_.className, f, pair.key, ti.arr)
 					}
 				}
 				decl[pair.key] = f.bind(decl);
@@ -1275,7 +1429,8 @@ JEEP.impl.End = function(env, decl, ddMode, noAdd)
 		decl.ScopedCreate = function(){
 			if(!JEEP.impl.ScopeStack.IsMarked())
 				JEEP.impl.Abort({runtime: true, reason: "ScopedCreate can only be used inside a scoped function", className: decl._jeepdef_.className})
-			let obj = new decl([].slice.call(arguments));
+			let ScopedDecl = Function.prototype.bind.apply(decl, [null].concat(Array.prototype.slice.call(arguments,0)))
+			let obj = new ScopedDecl;
 			JEEP.impl.ScopeStack.Add(obj);
 			return obj;
 		}
@@ -1554,14 +1709,14 @@ JEEP.impl.MakeArgNumFunction = function(func, fname, className, useRebasedFuncs)
 	}
 }
 
-JEEP.impl.MakeArgTypeFunction = function(className, func, fname, typeInfo, useRebasedFuncs)
+JEEP.impl.MakeArgTypeFunction = function(callerType, className, func, fname, typeInfo, useRebasedFuncs)
 {
 	return function(){
 		for(let k = 0; k<typeInfo.length; k++)
 		{
 			let ty = typeInfo[k]
 			if(ty.pos >= arguments.length)
-				JEEP.impl.Abort({runtime: true, className: className, id: "invalid-argtype-count", idnames: {func: fname, count: typeInfo.length}});
+				JEEP.impl.Abort2({runtime: true, objName: className, objType: callerType, id: "invalid-argtype-count", idnames: {func: fname, count: typeInfo.length}});
 			if(ty.type.length == 0)// means no validation
 				continue;
 			let errid = "invalid-argtype"
@@ -1580,7 +1735,7 @@ JEEP.impl.MakeArgTypeFunction = function(className, func, fname, typeInfo, useRe
 				match = !(ob == null || (isarr && !Array.isArray(ob)) || (!isarr && typeof ob !== ty.type))
 			}
 			if(!match)
-				JEEP.impl.Abort({runtime: true, className: className, id: errid, idnames: {
+				JEEP.impl.Abort2({runtime: true, objName: className, objType: callerType, id: errid, idnames: {
 					func: fname, argpos: ty.pos, type: ty.jeepObjectType ? ty.jeepObjectType+" " +ty.type:ty.type
 				}});
 		}
@@ -1631,7 +1786,7 @@ JEEP.impl.ProcessPrivateInfo = function(env, spec, decl)
 			{
 				let ti = typedFuncs[pair.key];
 				if(ti)
-					pair.value.func = this.MakeArgTypeFunction(decl._jeepdef_.className, pair.value.func, pair.key, ti.arr)
+					pair.value.func = this.MakeArgTypeFunction("class", decl._jeepdef_.className, pair.value.func, pair.key, ti.arr)
 			}
 		}
 	}
@@ -1661,7 +1816,7 @@ JEEP.impl.ProcessProtectedInfo = function(env, spec, decl)
 			{
 				let ti = typedFuncs[pair.key];
 				if(ti)
-					pair.value.func = this.MakeArgTypeFunction(decl._jeepdef_.className, pair.value.func, pair.key, ti.arr)
+					pair.value.func = this.MakeArgTypeFunction("class", decl._jeepdef_.className, pair.value.func, pair.key, ti.arr)
 			}
 		}
 	}
@@ -2032,7 +2187,6 @@ JEEP.impl.GenerateConstructor = function(env, CONSTRUCTOR)
 		{
 			// every instance must have its own $base that has functions rebased to itself
 			let ownBaseClass = {};
-			let instProto = Object.getPrototypeOf(this);
 			let bobj = JEEP.Utils.ObjectIterator.New(this.$base);
 			while(bobj.GetNext())
 			{
@@ -2100,6 +2254,8 @@ JEEP.impl.GenerateConstructor = function(env, CONSTRUCTOR)
 			ownCtor = JEEP.impl.InstantiatePrivateMembers(env, this.$def, this);
 
 		// Now the instance is ready to be 'constructed'.
+		let proto = JEEP.Utils.ShallowClone(Object.getPrototypeOf(inst));
+		Object.setPrototypeOf(inst, proto);
 		JEEP.impl.InvokeConstructors(env, this, ctorArray, ownCtor, initCtor ? [] : arguments);
 	}
 }
@@ -2932,7 +3088,7 @@ JEEP.impl.InstantiateProtectedMembers = function(env, classDef, inst, enforce, s
 					enumerable: false, configurable: false,
 					set: function(v){
 						JEEP.impl.Abort2({
-							runtime: true,
+							runtime: true, objName: inst.$name, objType: "class",
 							id: "prot-access", idnames: {
 								what: "variable", name: pair.key, className: inst.$name
 							}
@@ -2940,7 +3096,7 @@ JEEP.impl.InstantiateProtectedMembers = function(env, classDef, inst, enforce, s
 					},
 					get: function(){
 						JEEP.impl.Abort2({
-							runtime: true,
+							runtime: true, objName: inst.$name, objType: "class",
 							id: "prot-access", idnames: {
 								what: "variable", name: pair.key, className: inst.$name
 							}
@@ -2972,7 +3128,7 @@ JEEP.impl.InstantiateProtectedMembers = function(env, classDef, inst, enforce, s
 			if(enforce)
 			{
 				inst[pair.key] = function(){JEEP.impl.Abort2({
-					runtime: true,
+					runtime: true, objName: inst.$name, objType: "class",
 					id: "prot-access", idnames: {
 						what: "function", name: pair.key, className: inst.$name
 					}
@@ -3056,12 +3212,18 @@ JEEP.impl.InstantiatePrivateMembers = function(env, classDef, inst)
 		}
 	}
 
+	Object.setPrototypeOf(inst, privProto);
 	let proto = Object.getPrototypeOf(inst);
 	iter.Reset(classDef._jeepdef_.priv.users);
 	while(iter.GetNext())
 	{
 		let pair = iter.GetCurrPair();
 		proto[pair.key] = function(){return pair.value.apply(privThis, arguments)};
+		if(inst._jeep_.vtable){
+			let vi = inst._jeep_.vtable[pair.key];
+			if(vi)
+				vi.ownVF = proto[pair.key];
+		}
 	}
 
 	if(classDef._jeepdef_.prot && classDef._jeepdef_.prot.funcs)
@@ -3140,7 +3302,7 @@ JEEP.impl.CreateSpecialFunctions = function(env, decl, f, name, type, useRebased
 		let t = decl._jeepdef_.TypedFunctions[name]
 		if(t)
 		{
-			f = this.MakeArgTypeFunction(decl._jeepdef_.className, f, name, t.arr, useRebasedFuncs)
+			f = this.MakeArgTypeFunction("class", decl._jeepdef_.className, f, name, t.arr, useRebasedFuncs)
 			useRebasedFuncs = false;
 		}
 	}
@@ -3281,7 +3443,7 @@ JEEP.impl.Abort2 = function(info)
 	let reason = JEEP.impl.ErrorMessages.Get(info.id, info.idnames);
 	let msg = "";
 	if(info.runtime)
-		msg = JEEP.impl.ErrorMessages.Get("abort-reason-runtime", {reason: reason});
+		msg = JEEP.impl.ErrorMessages.Get("abort-reason-runtime", {where: info.where, reason: reason, objName: info.objName, objType: info.objType});
 	else if(info.objName)
 		msg = JEEP.impl.ErrorMessages.Get("abort-reason-objname", {where: info.where, reason: reason, objName: info.objName, objType: info.objType});
 	else
@@ -3986,7 +4148,7 @@ JEEP.impl.ScopeStack = {
 
 // This is a 'pre instantiated' object, so no need of being struct
 JEEP.impl.ObjectDatabase = {
-	database: {Class: {}, Struct: {}, Record: {}, Decl: {}},
+	database: {Group: {}, Class: {}, Struct: {}, Record: {}, Decl: {}},
 	Add: function(def, name, type){
 		let src = this.getSrc(type);
 		if(src !== null)
@@ -4004,11 +4166,12 @@ JEEP.impl.ObjectDatabase = {
 			delete src[name];
 	},
 	Reset: function(){
-		this.database = {Class: {}, Struct: {}, Record: {}, Decl: {}};
+		this.database = {Group: {}, Class: {}, Struct: {}, Record: {}, Decl: {}};
 	},
 	getSrc: function(type){// private
 		switch(type)
 		{
+			case "group": return this.database.Group;
 			case "class": return this.database.Class;
 			case "struct": return this.database.Struct;
 			case "record": return this.database.Record;
@@ -4036,8 +4199,8 @@ JEEP.impl.ArgTypeRecord = JEEP.impl.DoDefineRecord(null, true, "", {
 
 JEEP.impl.ErrorMessages = JEEP.Utils.MessageFormatter.New({
 	"abort-reason": "JEEP aborting from $where$. $reason$.",
-	"abort-reason-runtime": "JEEP aborting due to run time error. $reason$.",
-	"abort-reason-objname": "JEEP aborting from $where$ $objType$ [$objName$]. $reason$.",
+	"abort-reason-runtime": "JEEP aborting due to run time error [$objType$ $objName$]. $reason$.",
+	"abort-reason-objname": "JEEP aborting from $where$ [$objType$ $objName$]. $reason$.",
 	"abort": "JEEP couldn't generate the $type$ [$className$] due to the following errors.",
 	"abort-runtime": "JEEP run time error [$type$ $className$]. $reason$.",
 	"abort-where": "JEEP error in $where$ for $type$ [$className$]. $reason$.",
@@ -4116,7 +4279,7 @@ JEEP.impl.ErrorMessages = JEEP.Utils.MessageFormatter.New({
 	"prot-var-decl": "Protected variables are not allowed to be declared",
 	"prot-plain-func": "Only virtual and abstract protected functions are allowed to be declared",
 	"prot-var-getset": "Protected variables cannot have get and set directives",
-	"prot-access": "The $what$ '$name$' of the class [$className$] is protected and not accessible directly",
+	"prot-access": "The $what$ '$name$' is protected and not accessible directly",
 	"prot-decl-nodef": "The protected function '$func$' is declared but not defined",
 	"library-present": "A library by the name '$name$' is already registered",
 	"library-absent": "The library by the name '$name$' is not registered",
@@ -4124,6 +4287,8 @@ JEEP.impl.ErrorMessages = JEEP.Utils.MessageFormatter.New({
 	"invalid-lib-reg-func": "Cannot register a non function for the library '$name$'",
 	"-invalid-lib-reg-param": "The parameter for the library '-name-' contains the reserved word '$name'",
 	"invalid-lib-init-arg": "The function expects exactly one argument which must be a valid string",
+	"group-vars-getset": "Variables declared for Group cannot have directives",
+	"group-constructor": "The group '$name$' is already constructed",
 });
 
 JEEP.impl.stderr = console.log;

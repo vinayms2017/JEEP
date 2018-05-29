@@ -32,6 +32,7 @@ TestEnvInfo = {
 	let testNames = [
 	"EnvNamespace",
 	"Utils",
+	"Group",
 	"RecStruct",
 	"ClassGen", 
 	"Robustness",
@@ -1728,6 +1729,32 @@ TestEnvInfo.passtest_ClassGen = function(env, testList)
 		}
 	});
 	testList.push({
+		focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "virt-priv",
+		aspects: "class, private, virtual",
+		desc: "Tests the virtual function setup with usepriv directive",
+		exp: ["Derived.Run"],
+		func: function(cout){
+			env.Object.RegisterClass("Base", {
+				Functions: {
+					$virtual$__Run: function(){cout("Base.Run")}
+				},
+			});
+			env.Object.RegisterClass("Derived", {
+				BaseClass: "Base",
+				Functions: {
+					$virtual_usepriv$__Run: function(){this.$$.Run()}
+				},
+				Private: {
+					Run: function(){cout("Derived.Run")}
+				}
+			});
+			let Derived = JEEP.GetClass("Derived");
+			let d = new Derived(100);
+			d.Run();
+		}
+	});
+	testList.push({
 		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
 		name: "pub-prot-priv",
 		aspects: "class, public, protected, private",
@@ -2312,6 +2339,26 @@ TestEnvInfo.failtest_ClassGen = function(env, testList)
 		});
 
 		testList.push({
+			name: "protected function with code in declare (declare-define)",
+			desc: "as the name indicates.",
+			exp: [
+			"JEEP couldn't generate the class [Class] due to the following errors.",
+			"The member function 'Print' spans lines or contains implementation.",
+			],
+			func: function(cout){
+				env.Object.DeclareClass("Class", {
+					CONSTRUCTOR: function(){},
+					Protected: {
+						Print: function(what, where){cout(what + where)},
+					}
+				});				
+				env.Object.DefineClass("Class", {
+					CONSTRUCTOR: function(){},
+				});
+			}
+		});
+
+		testList.push({
 			name: "function directive validation",
 			desc: "Tests that certain directives can't be used together.",
 			exp: [
@@ -2562,12 +2609,12 @@ TestEnvInfo.failtest_ClassGen = function(env, testList)
 		name: "argtype",
 		desc: "Tests arg type (count, arr, num, rec, struct, class)",
 		exp: [
-		"JEEP run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
-		"JEEP run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
 		],
 		func: function(cout){
 			let C = env.Object.CreateClass("Class", {
@@ -2593,7 +2640,7 @@ TestEnvInfo.failtest_ClassGen = function(env, testList)
 	testList.push({
 		name: "argtype-makefunc",
 		desc: "Uses the MakeArgTypeValidated API",
-		exp: ["JEEP run time error [class <unknown>]. The function 'test' expects 'string' type for argument 0.",],
+		exp: ["JEEP aborting due to run time error [function <unknown>]. The function 'test' expects 'string' type for argument 0.",],
 		func: function(cout){
 			let func = env.Function.MakeArgTypeValidated(
 				"String, Number",
@@ -2870,12 +2917,12 @@ TestEnvInfo.passtest_Robustness = function(env, testList)
 		name: "rob-f-argtypes",
 		desc: "Tests arg type (count, arr, num, rec, struct, class)",
 		exp: [
-		"JEEP run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
-		"JEEP run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
 		],
 		func: function(cout){
 			let C = env.Object.CreateClass("Class", {
@@ -3266,12 +3313,12 @@ TestEnvInfo.failtest_Robustness = function(env, testList)
 			name: "argtype-static",
 			desc: "Tests arg type in static (count, arr, num, rec, struct, class)",
 			exp: [
-			"JEEP run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
-			"JEEP run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
-			"JEEP run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
-			"JEEP run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
-			"JEEP run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
-			"JEEP run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
+			"JEEP aborting due to run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
+			"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
+			"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
+			"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
+			"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
+			"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
 			],
 			func: function(cout){
 				let C = env.Object.CreateClass("Class", {
@@ -4432,17 +4479,21 @@ TestEnvInfo.commonProtectedPass = function(env, testList, prodnoret)
 			desc: "Tests the basic setup of protected members",
 			aspects: "protected",
 			exp: [
-				"JEEP aborting due to run time error. The function 'GetProtValue' of the class [Class] is protected and not accessible directly.",
+			"ProtFunc",
+			"ProtFunc",
+			"JEEP aborting due to run time error [class Class]. The function 'ProtFunc' is protected and not accessible directly.",
 			],
 			func: function(cout){
 				env.Object.RegisterClass("Class", {
+					CONSTRUCTOR: function(){this.$.ProtFunc()},
 					Protected: {
-						GetProtValue: function(){cout("GetProtValue")},
+						ProtFunc: function(){cout("ProtFunc")},
 					}
 				});
 				let A = JEEP.GetClass("Class");
 				let a = new A(100);
-				try{a.GetProtValue()}catch(e){}
+				a.$.ProtFunc();
+				try{a.ProtFunc()}catch(e){}
 			}
 		});
 	}
@@ -5104,7 +5155,7 @@ TestEnvInfo.commonProtectedFail = function(env, testList)
 			name: "prot-var-decl",
 			desc: "Tests arg type",
 			exp: [
-			"JEEP aborting from DeclareClass class [Class]. Protected variables are not allowed to be declared.",
+			"JEEP aborting from DeclareClass [class Class]. Protected variables are not allowed to be declared.",
 			],
 			func: function(cout){
 				env.Object.DeclareClass("Class", {
@@ -5880,12 +5931,12 @@ TestEnvInfo.failtest_Private = function(env, testList)
 		name: "argtype-private",
 		desc: "Tests arg type in static (count, arr, num, rec, struct, class)",
 		exp: [
-		"JEEP run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
-		"JEEP run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
-		"JEEP run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 5 number of argument(s).",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'number' type for argument 0.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'array' type for argument 1.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'record Record' type for argument 2 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'struct Struct' type for argument 3 but it is not registered.",
+		"JEEP aborting due to run time error [class Class]. The function 'Print' expects 'class Class' type for argument 4 but it is not registered.",
 		],
 		func: function(cout){
 			let C = env.Object.CreateClass("Class", {
@@ -6552,6 +6603,47 @@ TestEnvInfo.passtest_Hierarchy = function(env, testList)
 				BaseClass: "LowBaseA, LowBaseB",
 			});
 			TestEnvInfo.simpleTester("Derived", ["SomeVirtualFunction"]);
+		}
+	});
+
+	testList.push({
+		//focusThis: TestEnvInfo.SPECIAL_FOCUS_ON,
+		name: "virt-call-dest-sep-inst",
+		desc: "Tests that disabling and enabling polymorphism is localized to an instance by calling a virtual function of a clone inside ctor and dtor.",
+		exp: [
+			"Print: Derived",
+			"Print: Derived",
+		],
+		func: function(cout){
+			env.Object.RegisterClass("Base", {
+				CONSTRUCTOR: function(){},
+				Functions: {
+					Print: function(){cout("Print: " + this.GetName())},
+					$virtual$__GetName: function(){return "Base"}
+				}
+			});
+			env.Object.RegisterClass("Derived", {
+				CONSTRUCTOR: function(a){
+					if(a){
+						a.Print();
+						this.another = a;
+					}
+				},
+				DESTRUCTOR: function(){
+					if(this.another)
+						this.another.Print();
+				},
+				BaseClass: "Base",
+				Variables: {another: null},
+				Functions: {
+					$virtual$__GetName: function(){return "Derived"}
+				}
+			});
+			let A = JEEP.GetClass("Derived");
+			let a = new A;
+			env.Function.ScopedCall(function(){
+				A.ScopedCreate(a, "")// to avoid copy ctor!
+			});
 		}
 	});
 }
@@ -7896,4 +7988,177 @@ TestEnvInfo.failtest_Library = function(env, testList)
 			try{JEEP.InitLibrary("lib")}catch(e){}
 		}
 	});		
+}
+
+TestEnvInfo.passtest_Group = function(env, testList)
+{
+	testList.push({
+		name: "group-basic",
+		desc: "Tests the basic Group setup.",
+		aspects: "group",
+		exp: [
+		"value: 0", "value: 1", "Test.value: 0"
+		],
+		func: function(cout){
+			env.Object.RegisterGroup("Test", {
+				Variables: {value: 0},
+				Functions: {
+					inc: function(){this.value++},
+					dec: function(){this.value--},
+					get: function(){return this.value},
+					print: function(){cout(this.$name+".value: "+this.$def.get())}
+				}
+			})
+			let Test = JEEP.GetGroup("Test");
+			cout("value: "+Test.get())
+			Test.inc();
+			cout("value: "+Test.get())
+			Test.dec();
+			Test.print();
+		}
+	});		
+
+	testList.push({
+		name: "group-var",
+		desc: "Tests that Group variables are common and retain values across multiple api usages.",
+		aspects: "group",
+		exp: [
+		"value: 0", "value: 2", "value: 2"
+		],
+		func: function(cout){
+			env.Object.RegisterGroup("Test", {
+				Variables: {value: 0},
+				Functions: {
+					inc: function(){this.value++},
+					dec: function(){this.value--},
+					get: function(){return this.value}
+				}
+			})
+			let Test = JEEP.GetGroup("Test");
+			cout("value: "+Test.get())
+			Test.inc();Test.inc();
+			cout("value: "+Test.get())
+			let Test2 = JEEP.GetGroup("Test");
+			cout("value: "+Test2.get())
+		}
+	});		
+
+	testList.push({
+		name: "group-constructor",
+		desc: "Tests the constructor setup",
+		aspects: "group",
+		exp: [
+		"value: 100"
+		],
+		func: function(cout){
+			env.Object.RegisterGroup("Test", {
+				CONSTRUCTOR: function(v){
+					this.value = v;
+				},
+				Variables: {value: 0},
+				Functions: {
+					inc: function(){this.value++},
+					dec: function(){this.value--},
+					get: function(){return this.value}
+				}
+			})
+			let Test = JEEP.GetGroup("Test", 100);
+			cout("value: "+Test.get())
+			Test.inc();
+		}
+	});		
+
+	testList.push({
+		name: "group-arg-type",
+		desc: "Tests the argument type validation.",
+		aspects: "group",
+		exp: [
+		"value: 100", 
+		"JEEP aborting due to run time error [group Test]. The function 'set' expects 'number' type for argument 0."
+		],
+		func: function(cout){
+			env.Object.RegisterGroup("Test", {
+				Variables: {value: 0},
+				Functions: {
+					inc: function(){this.value++},
+					dec: function(){this.value--},
+					get: function(){return this.value},
+					$set: "Number",
+					set: function(v){this.value = v},
+				}
+			})
+			let Test = JEEP.GetGroup("Test");
+			Test.set(100);
+			cout("value: "+Test.get())
+			try{Test.set("100")}catch(e){}
+		}
+	});		
+
+	testList.push({
+		name: "group-private",
+		desc: "Tests the private setup along with constructor and variable state across calls.",
+		aspects: "group",
+		exp: [
+		"value: 100", "value: 101", "value: 100", "Test.$$ absent", "value: 101"
+		],
+		func: function(cout){
+			env.Object.RegisterGroup("Test", {
+				CONSTRUCTOR: function(){
+					this.$$.value = 100;
+				},
+				Private: {
+					value: 0,
+					inc: function(){this.$$.value++},
+					dec: function(){this.$$.value--},
+					get: function(){return this.$$.value}
+				},
+				Functions: {
+					inc: function(){return this.$$.inc()},
+					dec: function(){return this.$$.dec()},
+					get: function(){return this.$$.get()},
+				}
+			})
+			let Test = JEEP.GetGroup("Test");
+			cout("value: "+Test.get())
+			Test.inc();
+			cout("value: "+Test.get())
+			Test.dec();
+			cout("value: "+Test.get())
+			cout("Test.$$ "+(Test.$$?"present":"absent"))
+			Test.inc();
+			let Test2 = JEEP.GetGroup("Test");
+			cout("value: "+Test.get())
+		}
+	});		
+}
+
+TestEnvInfo.failtest_Group = function(env, testList)
+{
+	// this is an all mode failure
+
+	testList.push({
+		name: "group-constructor",
+		desc: "Tests the constructor setup",
+		aspects: "group",
+		exp: [
+		"value: 100", 
+		"JEEP aborting from GetGroup. The group 'Test' is already constructed."
+		],
+		func: function(cout){
+			env.Object.RegisterGroup("Test", {
+				CONSTRUCTOR: function(v){
+					this.value = v;
+				},
+				Variables: {value: 0},
+				Functions: {
+					inc: function(){this.value++},
+					dec: function(){this.value--},
+					get: function(){return this.value}
+				}
+			})
+			let Test = JEEP.GetGroup("Test", 100);
+			cout("value: "+Test.get())
+			try{JEEP.GetGroup("Test", -1)}catch(e){}
+		}
+	});	
 }
