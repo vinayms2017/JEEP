@@ -1,3 +1,5 @@
+#  THIS IS DEPRECATED AS A BETTER VERSION IS AVAILABLE IN JEEP2018. THIS WILL REMAIN FOR A WHILE TO ACT AS A REFERENCE TO A FEW THINGS TO FEW PEOPLE AND WILL BE TAKEN DOWN WITHOUT NOTICE
+
 # JEEP
 
 JEEP is a C++ inspired framework that brings object orientation to JavaScript, well beyond what is available in the language by design. It is an attempt to elevate the language from being a simple DOM manipulating script to something that can be used for classic software engineering. By that I mean being used to create reusable, customizable and extensible components of complex structure and behavior.
